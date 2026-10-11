@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — {{ settings.college_name }}</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Chart.js for Live Data Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Master Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-light">
+
+  <div class="admin-dashboard-container">
+    
+    <!-- ==========================================
+         SIDEBAR NAVIGATION
+         ========================================== -->
+    <aside class="admin-sidebar">
+      <div>
+        <!-- Sidebar Brand -->
+        <div class="d-flex align-items-center gap-2 mb-4 px-2">
+          <div class="brand-icon-box" style="width:38px;height:38px;font-size:1.1rem;">
+            <i class="bi bi-shield-check"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-white fs-6">Admin Panel</div>
+            <small class="text-teal-light" style="font-size:0.7rem;">AI Chatbot Control</small>
+          </div>
+        </div>
+
+        <!-- Navigation Menu -->
+        <nav class="d-flex flex-direction-column gap-1">
+          <div class="admin-nav-item active" onclick="showDashboardTab('overview')">
+            <i class="bi bi-grid-1x2-fill"></i>
+            <span class="admin-nav-text">Dashboard Overview</span>
+          </div>
+
+          <div class="admin-nav-item" onclick="showDashboardTab('faqs')">
+            <i class="bi bi-question-square-fill"></i>
+            <span class="admin-nav-text">Manage FAQs</span>
+          </div>
+
+          <div class="admin-nav-item" onclick="openAddFaqModal()">
+            <i class="bi bi-plus-circle-fill text-teal-light"></i>
+            <span class="admin-nav-text">Add New FAQ</span>
+          </div>
+
+          <div class="admin-nav-item" onclick="showDashboardTab('unknown')">
+            <i class="bi bi-exclamation-octagon-fill text-warning"></i>
+            <span class="admin-nav-text">
+              Unknown Queries 
+              {% if metrics.pending_unknown > 0 %}
+                <span class="badge bg-danger ms-1">{{ metrics.pending_unknown }}</span>
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="admin-nav-item" onclick="showDashboardTab('analytics')">
+            <i class="bi bi-bar-chart-line-fill"></i>
+            <span class="admin-nav-text">Chat Analytics</span>
+          </div>
+
+          <div class="admin-nav-item" onclick="showDashboardTab('settings')">
+            <i class="bi bi-gear-fill"></i>
+            <span class="admin-nav-text">Institutional Settings</span>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Bottom User Profile & Logout -->
+      <div class="pt-3 border-top border-secondary">
+        <div class="px-2 mb-3">
+          <div class="text-white small fw-bold">{{ session.get('admin_username', 'Administrator') }}</div>
+          <small class="text-secondary">{{ session.get('admin_role', 'Admin') }}</small>
+        </div>
+        <a href="{{ url_for('index') }}" class="admin-nav-item text-decoration-none mb-1">
+          <i class="bi bi-globe"></i>
+          <span class="admin-nav-text">View Website</span>
+        </a>
+        <a href="{{ url_for('chat') }}" class="admin-nav-item text-decoration-none mb-1">
+          <i class="bi bi-robot"></i>
+          <span class="admin-nav-text">Open Chatbot</span>
+        </a>
+        <a href="{{ url_for('admin_logout') }}" class="admin-nav-item text-danger text-decoration-none">
+          <i class="bi bi-box-arrow-right"></i>
+          <span class="admin-nav-text">Sign Out</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ==========================================
+         MAIN CONTENT AREA
+         ========================================== -->
+    <main class="admin-content-main">
+      
+      <!-- Top Bar -->
+      <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <div>
+          <h3 id="currentTabTitle" class="fw-bold mb-1">Dashboard Overview</h3>
+          <p class="text-muted small mb-0">{{ settings.college_name }} &bull; AI Knowledge Management Console</p>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-teal-primary text-white rounded-pill px-3 btn-sm shadow-sm" onclick="openAddFaqModal()" style="background-color: var(--teal-primary);">
+            <i class="bi bi-plus-lg me-1"></i> Add FAQ
+          </button>
+          <a href="{{ url_for('chat') }}" class="btn btn-outline-dark rounded-pill px-3 btn-sm" target="_blank">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Test Chatbot
+          </a>
+        </div>
+      </div>
+
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show py-2 px-3 small mb-4" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close py-2" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- ==========================================
+           TAB 1: DASHBOARD OVERVIEW
+           ========================================== -->
+      <div id="tab-overview" class="admin-tab-content">
+        <!-- 4 Metric Cards -->
+        <div class="row g-4 mb-4">
+          <div class="col-md-3">
+            <div class="metric-card">
+              <div>
+                <div class="metric-number text-primary">{{ metrics.total_faqs }}</div>
+                <div class="metric-label">Total Verified FAQs</div>
+              </div>
+              <div class="feature-icon-wrapper icon-blue m-0" style="width:48px;height:48px;">
+                <i class="bi bi-question-circle"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="metric-card">
+              <div>
+                <div class="metric-number text-teal">{{ metrics.total_queries }}</div>
+                <div class="metric-label">Queries Processed</div>
+              </div>
+              <div class="feature-icon-wrapper icon-teal m-0" style="width:48px;height:48px;">
+                <i class="bi bi-chat-dots"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="metric-card">
+              <div>
+                <div class="metric-number text-danger">{{ metrics.pending_unknown }}</div>
+                <div class="metric-label">Unanswered Queries</div>
+              </div>
+              <div class="feature-icon-wrapper icon-amber m-0" style="width:48px;height:48px;">
+                <i class="bi bi-question-diamond"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-3">
+            <div class="metric-card">
+              <div>
+                <div class="metric-number text-success">{{ metrics.resolution_rate }}%</div>
+                <div class="metric-label">AI Resolution Rate</div>
+              </div>
+              <div class="feature-icon-wrapper icon-teal m-0" style="width:48px;height:48px;">
+                <i class="bi bi-check2-circle"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activity & Quick Unknown Queries -->
+        <div class="row g-4 mb-4">
+          <!-- Pending Unknown Queries Card -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-danger"><i class="bi bi-exclamation-circle-fill me-2"></i> Unanswered Queries Requiring Review</h5>
+                <span class="badge bg-danger rounded-pill">{{ metrics.pending_unknown }} Pending</span>
+              </div>
+              <p class="text-muted small">Queries where AI confidence was below threshold. Add answers below to continuously train the chatbot.</p>
+              
+              <div class="table-responsive">
+                <table class="table table-hover align-middle small mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Query</th>
+                      <th>Time</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for uq in metrics.recent_unknown %}
+                      {% if uq.status == 'Pending Review' %}
+                        <tr>
+                          <td><strong>{{ uq.query_text }}</strong></td>
+                          <td class="text-muted">{{ uq.timestamp[:16] }}</td>
+                          <td>
+                            <button class="btn btn-sm btn-teal-primary text-white rounded-pill px-2 py-0" 
+                                    onclick="convertUnknownToFaq('{{ uq.id }}', '{{ uq.query_text | replace("'", "\\'") }}')">
+                              Add Answer
+                            </button>
+                          </td>
+                        </tr>
+                      {% endif %}
+                    {% else %}
+                      <tr>
+                        <td colspan="3" class="text-center text-muted py-3">No pending unknown queries. Great job!</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Chat History -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-primary"><i class="bi bi-clock-history me-2"></i> Recent Student Activity</h5>
+                <span class="badge bg-primary rounded-pill">Real-Time</span>
+              </div>
+              <p class="text-muted small">Latest enquiries asked through WhatsApp widget and full-screen workspace.</p>
+
+              <div class="table-responsive">
+                <table class="table table-hover align-middle small mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Student Query</th>
+                      <th>Category</th>
+                      <th>Match</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for chat in metrics.recent_chats[:6] %}
+                      <tr>
+                        <td>
+                          <strong>{{ chat.user_query }}</strong>
+                          <span class="badge bg-light text-secondary ms-1">{{ chat.language }}</span>
+                        </td>
+                        <td><span class="badge bg-info text-dark">{{ chat.category }}</span></td>
+                        <td>
+                          {% if chat.confidence >= 0.35 %}
+                            <span class="text-success fw-bold">{{ (chat.confidence * 100) | round | int }}%</span>
+                          {% else %}
+                            <span class="text-danger fw-bold">Fallback</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                    {% else %}
+                      <tr>
+                        <td colspan="3" class="text-center text-muted py-3">No chat activity recorded yet.</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Summary Analytics Chart Row -->
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+              <h5 class="fw-bold mb-3">Knowledge Base Categories</h5>
+              <canvas id="overviewCategoryChart" height="200"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+              <h5 class="fw-bold mb-3">Answered vs Unanswered Queries</h5>
+              <canvas id="overviewResolutionChart" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB 2: MANAGE FAQS
+           ========================================== -->
+      <div id="tab-faqs" class="admin-tab-content d-none">
+        <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+              <h5 class="fw-bold mb-1">College FAQ Knowledge Base ({{ metrics.total_faqs }} Records)</h5>
+              <p class="text-muted small mb-0">All questions, answers, and Tanglish variations stored in SQLite database.</p>
+            </div>
+            <div class="d-flex gap-2">
+              <input type="text" id="faqSearchInput" class="form-control form-control-sm" placeholder="Search questions..." onkeyup="filterFaqTable()">
+              <select id="faqCategoryFilter" class="form-select form-select-sm" onchange="filterFaqTable()">
+                <option value="">All Categories</option>
+                <option value="Admissions">Admissions</option>
+                <option value="Fees">Fees</option>
+                <option value="Courses">Courses</option>
+                <option value="Hostel">Hostel</option>
+                <option value="Transport">Transport</option>
+                <option value="Placements">Placements</option>
+                <option value="Examinations">Examinations</option>
+                <option value="Campus Facilities">Campus Facilities</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle small" id="faqTable">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 50px;">ID</th>
+                  <th style="width: 120px;">Category</th>
+                  <th style="width: 250px;">Primary Question</th>
+                  <th>Verified Institutional Answer</th>
+                  <th style="width: 140px;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for faq in metrics.all_faqs %}
+                  <tr class="faq-row" data-category="{{ faq.category }}">
+                    <td>{{ faq.id }}</td>
+                    <td><span class="badge bg-secondary">{{ faq.category }}</span></td>
+                    <td>
+                      <strong>{{ faq.question }}</strong>
+                      {% if faq.tanglish_variations %}
+                        <div class="text-muted" style="font-size:0.75rem;">
+                          <em>Tanglish: {{ faq.tanglish_variations[:55] }}...</em>
+                        </div>
+                      {% endif %}
+                    </td>
+                    <td>{{ faq.answer }}</td>
+                    <td>
+                      <button class="btn btn-sm btn-outline-primary py-0 px-2" 
+                              onclick="openEditFaqModal('{{ faq.id }}', '{{ faq.question | replace("'", "\\'") }}', '{{ faq.answer | replace("'", "\\'") }}', '{{ faq.category }}', '{{ (faq.tanglish_variations or '') | replace("'", "\\'") }}', '{{ (faq.doc_link or '') | replace("'", "\\'") }}', '{{ (faq.doc_title or '') | replace("'", "\\'") }}')">
+                        <i class="bi bi-pencil-square"></i> Edit
+                      </button>
+                      <form method="POST" action="{{ url_for('delete_faq', faq_id=faq.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete FAQ #{{ faq.id }}?');">
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB 3: UNKNOWN QUERIES
+           ========================================== -->
+      <div id="tab-unknown" class="admin-tab-content d-none">
+        <div class="card border-0 shadow-sm rounded-4 p-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h5 class="fw-bold mb-1">Unknown Queries Log ({{ metrics.recent_unknown | length }} Total)</h5>
+              <p class="text-muted small mb-0">Questions students asked that could not be confidently classified. Click "Add as FAQ" to supply verified info and retrain the model!</p>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle small">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>Query Text</th>
+                  <th>Predicted Candidate</th>
+                  <th>Confidence</th>
+                  <th>Status</th>
+                  <th>Date & Time</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for uq in metrics.recent_unknown %}
+                  <tr>
+                    <td>{{ uq.id }}</td>
+                    <td><strong class="text-danger">{{ uq.query_text }}</strong></td>
+                    <td><code>{{ uq.predicted_intent or 'None' }}</code></td>
+                    <td>{{ (uq.confidence * 100) | round | int }}%</td>
+                    <td>
+                      {% if uq.status == 'Pending Review' %}
+                        <span class="badge bg-warning text-dark">{{ uq.status }}</span>
+                      {% else %}
+                        <span class="badge bg-success">{{ uq.status }}</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-muted">{{ uq.timestamp }}</td>
+                    <td>
+                      {% if uq.status == 'Pending Review' %}
+                        <button class="btn btn-sm btn-teal-primary text-white rounded-pill px-3 py-1"
+                                onclick="convertUnknownToFaq('{{ uq.id }}', '{{ uq.query_text | replace("'", "\\'") }}')">
+                          <i class="bi bi-plus-circle me-1"></i> Add as FAQ
+                        </button>
+                      {% else %}
+                        <span class="text-muted small"><i class="bi bi-check-all text-success"></i> Answered</span>
+                      {% endif %}
+                      <form method="POST" action="{{ url_for('delete_unknown_query', query_id=uq.id) }}" class="d-inline ms-1" onsubmit="return confirm('Delete this unknown query?');">
+                        <button class="btn btn-sm btn-outline-secondary py-1 px-2"><i class="bi bi-trash"></i></button>
+                      </form>
+                    </td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="7" class="text-center text-muted py-4">No unknown queries recorded.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB 4: CHAT ANALYTICS
+           ========================================== -->
+      <div id="tab-analytics" class="admin-tab-content d-none">
+        <div class="row g-4 mb-4">
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+              <h5 class="fw-bold mb-3"><i class="bi bi-pie-chart-fill text-teal me-2"></i> Category Distribution</h5>
+              <canvas id="analyticsCategoryChart"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+              <h5 class="fw-bold mb-3"><i class="bi bi-translate text-primary me-2"></i> Query Language (English vs Tanglish)</h5>
+              <canvas id="analyticsLangChart"></canvas>
+            </div>
+          </div>
+          <div class="col-lg-12">
+            <div class="card border-0 shadow-sm rounded-4 p-4">
+              <h5 class="fw-bold mb-3"><i class="bi bi-graph-up-arrow text-success me-2"></i> Most Frequently Asked Intent Topics</h5>
+              <canvas id="analyticsIntentChart" height="90"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           TAB 5: INSTITUTIONAL SETTINGS
+           ========================================== -->
+      <div id="tab-settings" class="admin-tab-content d-none">
+        <div class="card border-0 shadow-sm rounded-4 p-4 max-w-700">
+          <h5 class="fw-bold mb-3"><i class="bi bi-sliders text-primary me-2"></i> Institutional Information Settings</h5>
+          <p class="text-muted small mb-4">Configure the institutional parameters used across the landing page and chatbot knowledge base.</p>
+
+          <form method="POST" action="{{ url_for('update_settings') }}">
+            <div class="mb-3">
+              <label class="form-label small fw-bold">College Name</label>
+              <input type="text" name="college_name" class="form-control" value="{{ settings.college_name }}" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Tagline / Affiliation Statement</label>
+              <input type="text" name="tagline" class="form-control" value="{{ settings.tagline }}" required>
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Admission Phone Number</label>
+                <input type="text" name="phone" class="form-control" value="{{ settings.phone }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Admission Email ID</label>
+                <input type="email" name="email" class="form-control" value="{{ settings.email }}" required>
+              </div>
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">TNEA Counselling Code</label>
+                <input type="text" name="tnea_counselling_code" class="form-control" value="{{ settings.tnea_counselling_code }}" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Admission Status Banner</label>
+                <input type="text" name="admission_status" class="form-control" value="{{ settings.admission_status }}" required>
+              </div>
+            </div>
+            <div class="mb-4">
+              <label class="form-label small fw-bold">Campus Address</label>
+              <textarea name="address" class="form-control" rows="2" required>{{ settings.address }}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary-glow px-4 py-2">
+              <i class="bi bi-save me-1"></i> Save Institutional Settings
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ==========================================
+       MODAL: ADD NEW FAQ
+       ========================================== -->
+  <div class="modal fade" id="addFaqModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content rounded-4 border-0 shadow-lg">
+        <div class="modal-header bg-navy text-white" style="background-color: var(--navy-primary);">
+          <h5 class="modal-title text-white fw-bold"><i class="bi bi-plus-circle me-2"></i> Add New FAQ Record</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST" action="{{ url_for('add_faq') }}">
+          <input type="hidden" id="addUnknownId" name="unknown_id" value="">
+          <div class="modal-body p-4">
+            <div class="row g-3 mb-3">
+              <div class="col-md-8">
+                <label class="form-label small fw-bold">Primary Question *</label>
+                <input type="text" id="addQuestion" name="question" class="form-control" placeholder="e.g. What about canteen menu?" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">Category *</label>
+                <select name="category" class="form-select" required>
+                  <option value="Admissions">Admissions</option>
+                  <option value="Fees">Fees</option>
+                  <option value="Courses">Courses</option>
+                  <option value="Hostel">Hostel</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Placements">Placements</option>
+                  <option value="Examinations">Examinations</option>
+                  <option value="Campus Facilities">Campus Facilities</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Verified Institutional Answer *</label>
+              <textarea id="addAnswer" name="answer" class="form-control" rows="3" placeholder="Enter accurate, verified college answer..." required></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Tanglish Variations & Keywords (Comma-Separated)</label>
+              <input type="text" name="tanglish_variations" class="form-control" placeholder="e.g. canteen food eppadi?, canteen timing enna?, coffee snacks kedaikuma?">
+              <small class="text-muted">Phrases and local spellings students might ask in Tanglish.</small>
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Official Document Title (Optional)</label>
+                <input type="text" name="doc_title" class="form-control" placeholder="e.g. Cafeteria Menu & Food Timings">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Document Link / URL (Optional)</label>
+                <input type="url" name="doc_link" class="form-control" placeholder="https://example.edu/canteen.pdf">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-teal-primary text-white rounded-pill px-4" style="background-color: var(--teal-primary);">
+              <i class="bi bi-check-lg me-1"></i> Save FAQ & Retrain AI
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: EDIT FAQ
+       ========================================== -->
+  <div class="modal fade" id="editFaqModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content rounded-4 border-0 shadow-lg">
+        <div class="modal-header bg-navy text-white" style="background-color: var(--navy-primary);">
+          <h5 class="modal-title text-white fw-bold"><i class="bi bi-pencil-square me-2"></i> Edit FAQ Record</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form id="editFaqForm" method="POST" action="">
+          <div class="modal-body p-4">
+            <div class="row g-3 mb-3">
+              <div class="col-md-8">
+                <label class="form-label small fw-bold">Question *</label>
+                <input type="text" id="editQuestion" name="question" class="form-control" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">Category *</label>
+                <select id="editCategory" name="category" class="form-select" required>
+                  <option value="Admissions">Admissions</option>
+                  <option value="Fees">Fees</option>
+                  <option value="Courses">Courses</option>
+                  <option value="Hostel">Hostel</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Placements">Placements</option>
+                  <option value="Examinations">Examinations</option>
+                  <option value="Campus Facilities">Campus Facilities</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Answer *</label>
+              <textarea id="editAnswer" name="answer" class="form-control" rows="3" required></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Tanglish Variations & Keywords</label>
+              <input type="text" id="editTanglish" name="tanglish_variations" class="form-control">
+            </div>
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Document Title</label>
+                <input type="text" id="editDocTitle" name="doc_title" class="form-control">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Document Link / URL</label>
+                <input type="text" id="editDocLink" name="doc_link" class="form-control">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-light">
+            <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-teal-primary text-white rounded-pill px-4" style="background-color: var(--teal-primary);">
+              <i class="bi bi-check-lg me-1"></i> Update & Retrain AI
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Admin Dashboard JavaScript -->
+  <script>
+    let addModal, editModal;
+    document.addEventListener('DOMContentLoaded', () => {
+      addModal = new bootstrap.Modal(document.getElementById('addFaqModal'));
+      editModal = new bootstrap.Modal(document.getElementById('editFaqModal'));
+      loadAnalyticsCharts();
+    });
+
+    function showDashboardTab(tabName) {
+      document.querySelectorAll('.admin-tab-content').forEach(el => el.classList.add('d-none'));
+      document.querySelectorAll('.admin-nav-item').forEach(el => el.classList.remove('active'));
+
+      const targetTab = document.getElementById('tab-' + tabName);
+      if (targetTab) targetTab.classList.remove('d-none');
+
+      const titles = {
+        'overview': 'Dashboard Overview',
+        'faqs': 'Manage FAQs & Knowledge Base',
+        'unknown': 'Unknown Queries Log',
+        'analytics': 'Chatbot Analytics & Insights',
+        'settings': 'Institutional Information Settings'
+      };
+      document.getElementById('currentTabTitle').textContent = titles[tabName] || 'Dashboard';
+      event.currentTarget.classList.add('active');
+    }
+
+    function openAddFaqModal() {
+      document.getElementById('addQuestion').value = '';
+      document.getElementById('addAnswer').value = '';
+      document.getElementById('addUnknownId').value = '';
+      addModal.show();
+    }
+
+    function convertUnknownToFaq(unknownId, queryText) {
+      document.getElementById('addQuestion').value = queryText;
+      document.getElementById('addUnknownId').value = unknownId;
+      document.getElementById('addAnswer').value = '';
+      addModal.show();
+    }
+
+    function openEditFaqModal(id, q, a, cat, tanglish, docLink, docTitle) {
+      const form = document.getElementById('editFaqForm');
+      form.action = '/admin/faq/edit/' + id;
+      document.getElementById('editQuestion').value = q;
+      document.getElementById('editAnswer').value = a;
+      document.getElementById('editCategory').value = cat;
+      document.getElementById('editTanglish').value = tanglish;
+      document.getElementById('editDocLink').value = docLink;
+      document.getElementById('editDocTitle').value = docTitle;
+      editModal.show();
+    }
+
+    function filterFaqTable() {
+      const search = document.getElementById('faqSearchInput').value.toLowerCase();
+      const cat = document.getElementById('faqCategoryFilter').value;
+      const rows = document.querySelectorAll('.faq-row');
+
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const rowCat = row.getAttribute('data-category');
+        const matchesSearch = text.includes(search);
+        const matchesCat = !cat || rowCat === cat;
+
+        row.style.display = (matchesSearch && matchesCat) ? '' : 'none';
+      });
+    }
+
+    async function loadAnalyticsCharts() {
+      try {
+        const res = await fetch('/api/admin/chart-data');
+        const data = await res.json();
+
+        // 1. Overview Category Doughnut
+        new Chart(document.getElementById('overviewCategoryChart'), {
+          type: 'doughnut',
+          data: {
+            labels: data.categories,
+            datasets: [{
+              data: data.category_counts,
+              backgroundColor: ['#0d9488', '#2563eb', '#9333ea', '#f59e0b', '#10b981', '#ef4444', '#64748b', '#3b82f6']
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { position: 'right' } } }
+        });
+
+        // 2. Overview Answered vs Unanswered
+        new Chart(document.getElementById('overviewResolutionChart'), {
+          type: 'pie',
+          data: {
+            labels: data.answered_vs_unanswered.labels,
+            datasets: [{
+              data: data.answered_vs_unanswered.data,
+              backgroundColor: ['#10b981', '#ef4444']
+            }]
+          },
+          options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        // 3. Analytics Tab Category Chart
+        new Chart(document.getElementById('analyticsCategoryChart'), {
+          type: 'polarArea',
+          data: {
+            labels: data.categories,
+            datasets: [{
+              data: data.category_counts,
+              backgroundColor: ['#0d9488', '#2563eb', '#9333ea', '#f59e0b', '#10b981', '#ef4444', '#64748b']
+            }]
+          }
+        });
+
+        // 4. Analytics Tab Language Chart
+        new Chart(document.getElementById('analyticsLangChart'), {
+          type: 'bar',
+          data: {
+            labels: data.languages.labels,
+            datasets: [{
+              label: 'Queries',
+              data: data.languages.data,
+              backgroundColor: ['#2563eb', '#0d9488']
+            }]
+          },
+          options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        // 5. Analytics Tab Intent Chart
+        new Chart(document.getElementById('analyticsIntentChart'), {
+          type: 'bar',
+          data: {
+            labels: data.top_intents.labels,
+            datasets: [{
+              label: 'Frequency Count',
+              data: data.top_intents.data,
+              backgroundColor: '#0f766e'
+            }]
+          },
+          options: { indexAxis: 'y', scales: { x: { beginAtZero: true } } }
+        });
+
+      } catch (err) {
+        console.error('Error loading analytics charts:', err);
+      }
+    }
+  </script>
+</body>
+</html>

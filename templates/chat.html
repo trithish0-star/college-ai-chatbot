@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIVA College Assistant — AI Chatbot Workspace</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Custom Master Styles -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="figma-chat-body">
+
+  <div class="figma-app-container">
+    
+    <!-- ==========================================
+         1. LEFT SIDEBAR (Matching uploaded Figma layout)
+         ========================================== -->
+    <aside id="figmaSidebar" class="figma-sidebar">
+      <div class="figma-sidebar-top">
+        <!-- Brand Logo -->
+        <div class="figma-brand-logo">
+          <i class="bi bi-robot"></i>
+          <span>AIVA CHATBOT</span>
+        </div>
+
+        <!-- "+ New Chat" Button -->
+        <button id="btnNewChat" class="btn-figma-new-chat">
+          <i class="bi bi-plus-lg"></i>
+          <span>New Chat</span>
+        </button>
+
+        <!-- Session List & Quick Enquiries -->
+        <div class="figma-session-list">
+          <div class="figma-session-title">Quick Topics</div>
+          <div class="figma-session-item active" onclick="triggerQuick('CSE ku fees evlo?')">
+            <i class="bi bi-chat-left-text"></i>
+            <span>CSE Fees Enquiry</span>
+          </div>
+          <div class="figma-session-item" onclick="triggerQuick('How to get admission?')">
+            <i class="bi bi-chat-left-text"></i>
+            <span>Admission Process</span>
+          </div>
+          <div class="figma-session-item" onclick="triggerQuick('Hostel available ah?')">
+            <i class="bi bi-chat-left-text"></i>
+            <span>Hostel & Mess</span>
+          </div>
+          <div class="figma-session-item" onclick="triggerQuick('Placement details venum')">
+            <i class="bi bi-chat-left-text"></i>
+            <span>Campus Placements</span>
+          </div>
+          <div class="figma-session-item" onclick="triggerQuick('Is bus facility available?')">
+            <i class="bi bi-chat-left-text"></i>
+            <span>Bus Routes & Timing</span>
+          </div>
+          <div class="figma-session-item" onclick="triggerQuick('When is the exam timetable released?')">
+            <i class="bi bi-chat-left-text"></i>
+            <span>Semester Exams</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom User / Admin / Return to Campus Links -->
+      <div class="figma-sidebar-bottom">
+        <a href="{{ url_for('index') }}" class="figma-session-item text-decoration-none">
+          <i class="bi bi-house-door-fill"></i>
+          <span>Return to College Site</span>
+        </a>
+        <a href="{{ url_for('admin_login') }}" class="btn-figma-upgrade text-decoration-none">
+          <i class="bi bi-shield-lock-fill"></i>
+          <span>Admin Portal</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- ==========================================
+         2. MAIN CHAT CENTER PANEL
+         ========================================== -->
+    <main class="figma-chat-main">
+      
+      <!-- Top Navigation Bar in Figma Screenshot -->
+      <header class="figma-topbar">
+        <div class="d-flex align-items-center gap-3">
+          <button id="mobileSidebarToggle" class="btn btn-sm d-lg-none text-dark">
+            <i class="bi bi-list fs-4"></i>
+          </button>
+          <div class="d-none d-sm-block text-secondary small fw-bold">
+            <i class="bi bi-mortarboard-fill text-teal me-1"></i> {{ settings.college_name }}
+          </div>
+        </div>
+
+        <!-- Model Pills in Screenshot -->
+        <div class="figma-model-pills">
+          <button class="model-pill active" title="Feature extraction via TF-IDF Vectorizer and Intent Classification via Logistic Regression">
+            TF-IDF + Logistic Reg
+          </button>
+          <button class="model-pill" title="Natural Language Processing for English and Tanglish queries">
+            English & Tanglish
+          </button>
+          <button class="model-pill" title="Verified knowledge retrieval from SQLite database">
+            SQLite Verified DB
+          </button>
+        </div>
+
+        <!-- Right User Actions & Theme Toggle -->
+        <div class="figma-topbar-right">
+          <button id="themeToggle" class="btn btn-sm btn-link p-0 text-secondary" title="Toggle Light/Dark Theme">
+            <i class="bi bi-moon-stars-fill"></i>
+          </button>
+          <a href="{{ url_for('admin_login') }}" class="figma-user-avatar text-decoration-none" title="Administrator Login">
+            <i class="bi bi-person-fill"></i>
+          </a>
+        </div>
+      </header>
+
+      <!-- Scrollable Conversation Area -->
+      <section id="figmaChatConversation" class="figma-chat-conversation">
+        
+        <!-- Large Centered Watermark Logo (Matching Figma Screenshot) -->
+        <div id="figmaWatermarkBg" class="figma-watermark-bg">
+          <h1>AIVA</h1>
+          <h2>CHATBOT</h2>
+        </div>
+
+        <!-- Chat Stream Messages -->
+        <div id="chatMessagesStream" class="chat-messages-stream">
+          <!-- Live conversation messages will be dynamically injected here -->
+        </div>
+
+        <!-- Suggestion Prompt Cards Grid (Matching the 6 cards in Figma image) -->
+        <div id="figmaPromptGrid" class="figma-cards-grid">
+          <!-- Card 1 -->
+          <div class="figma-prompt-card" data-query="CSE ku fees evlo?">
+            <h4>CSE Course Fees</h4>
+            <p>Tuition fees, lab maintenance & semester charges for CSE</p>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="figma-prompt-card" data-query="How to get admission?">
+            <h4>Admission Process</h4>
+            <p>TNEA Single Window counselling & management quota details</p>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="figma-prompt-card" data-query="Hostel available ah?">
+            <h4>Hostel Facilities</h4>
+            <p>Boys & girls hostel availability, mess food, Wi-Fi & room rent</p>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="figma-prompt-card" data-query="Placement details venum">
+            <h4>Campus Placements</h4>
+            <p>TCS, Infosys, Zoho recruitment statistics & packages</p>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="figma-prompt-card" data-query="Is bus facility available?">
+            <h4>Bus Routes & Timings</h4>
+            <p>35+ college bus fleet covering Chennai stages & fees</p>
+          </div>
+
+          <!-- Card 6 -->
+          <div class="figma-prompt-card" data-query="When is the exam timetable released?">
+            <h4>Exam Timetable</h4>
+            <p>Anna University semester examination calendar & rules</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Bottom Chat Input Bar (Rounded Pill from Figma screenshot) -->
+      <footer class="figma-input-container">
+        <div class="figma-input-pill">
+          <input type="text" id="figmaChatInput" class="figma-chat-input" 
+                 placeholder="Type your doubt in English or Tanglish..." autocomplete="off">
+          <button id="figmaSendBtn" class="btn-figma-send" title="Send Query">
+            <i class="bi bi-send-fill"></i>
+          </button>
+        </div>
+      </footer>
+
+    </main>
+
+    <!-- ==========================================
+         3. RIGHT SIDEBAR ("Generated Links of Websites and Documents will appear here")
+         Matching Figma Screenshot layout exactly
+         ========================================== -->
+    <aside class="figma-right-panel">
+      <div>
+        <h3 class="figma-right-header">
+          Generated Links of<br>
+          Websites and Documents<br>
+          will appear here
+        </h3>
+
+        <!-- Dynamic List of Verified College Links & Documents -->
+        <div id="rightDocsList" class="right-docs-list">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Expand / Fullscreen Toggle in bottom corner of right panel -->
+      <button id="figmaFullscreenToggle" class="figma-fullscreen-toggle" title="Toggle Fullscreen">
+        <i class="bi bi-arrows-fullscreen"></i>
+      </button>
+    </aside>
+
+  </div>
+
+  <!-- Interactive Document Preview Modal -->
+  <div class="modal fade" id="docPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+      <div class="modal-content rounded-4 border-0 shadow-lg">
+        <div class="modal-header bg-navy text-white" style="background-color: #0a192f;">
+          <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-file-earmark-text-fill text-info fs-5"></i>
+            <div>
+              <h5 class="modal-title text-white fw-bold mb-0" id="modalDocTitle">Verified College Document</h5>
+              <small class="text-info" id="modalDocCategory">Official Institutional Record</small>
+            </div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-4" id="modalDocBody">
+          <!-- Dynamically loaded document content -->
+        </div>
+        <div class="modal-footer bg-light d-flex justify-content-between">
+          <a href="#" id="modalDocOpenFull" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Open Full Page
+          </a>
+          <div>
+            <button type="button" class="btn btn-sm btn-teal text-white rounded-pill me-2" onclick="printDocModal()" style="background-color: #0d9488;">
+              <i class="bi bi-printer me-1"></i> Print / PDF
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary rounded-pill" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 & Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{{ url_for('static', filename='js/figma_chat.js') }}"></script>
+  <script>
+    function triggerQuick(query) {
+      const input = document.getElementById('figmaChatInput');
+      const sendBtn = document.getElementById('figmaSendBtn');
+      if (input && sendBtn) {
+        input.value = query;
+        sendBtn.click();
+      }
+    }
+
+    function printDocModal() {
+      const body = document.getElementById('modalDocBody').innerHTML;
+      const title = document.getElementById('modalDocTitle').innerText;
+      const win = window.open('', '', 'height=700,width=900');
+      win.document.write('<html><head><title>' + title + '</title>');
+      win.document.write('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">');
+      win.document.write('</head><body style="padding:40px;">');
+      win.document.write('<h3>' + title + '</h3><hr>');
+      win.document.write(body);
+      win.document.write('</body></html>');
+      win.document.close();
+      win.focus();
+      setTimeout(() => { win.print(); win.close(); }, 500);
+    }
+  </script>
+</body>
+</html>
