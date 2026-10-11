@@ -115,6 +115,16 @@ def api_get_document(doc_slug):
     doc = get_document_by_slug(doc_slug)
     return jsonify({'success': True, 'document': doc})
 
+@app.route('/health')
+@app.route('/ping')
+def health_check():
+    """Health check endpoint for deployment keep-alive pings."""
+    return jsonify({
+        'status': 'alive',
+        'app': 'College Chatbot Using AI',
+        'timestamp': datetime.now().isoformat()
+    }), 200
+
 # ==========================================
 # CHATBOT API ENDPOINTS
 # ==========================================
@@ -571,6 +581,37 @@ def admin_chart_data():
             'data': top_intent_counts
         }
     })
+
+# ==========================================
+# DEPLOYMENT KEEP-ALIVE SYSTEM
+# ==========================================
+
+def start_self_ping():
+    """Background keep-alive thread that periodically pings the app to prevent sleeping on free cloud tiers."""
+    import threading
+    import time
+    import urllib.request
+
+    app_url = os.environ.get('APP_URL')
+    if not app_url:
+        return
+
+    def ping_worker():
+        target = app_url.rstrip('/') + '/health'
+        time.sleep(30)
+        while True:
+            try:
+                urllib.request.urlopen(target, timeout=15)
+                print(f"[Keep-Alive] Pinged {target} successfully.")
+            except Exception as e:
+                print(f"[Keep-Alive] Ping notification: {e}")
+            time.sleep(600)  # Ping every 10 minutes to stay awake
+
+    thread = threading.Thread(target=ping_worker, daemon=True)
+    thread.start()
+    print(f"[Keep-Alive] Monitoring active for: {app_url}")
+
+start_self_ping()
 
 # ==========================================
 # SERVER BOOTSTRAP

@@ -206,6 +206,49 @@ OK
 
 ---
 
+---
+
+## 🌐 24/7 Cloud Deployment & Keep-Alive Setup
+
+This project is configured for **1-click cloud deployment** on platforms like **Render**, **Railway**, and **PythonAnywhere**, and includes a dual **Keep-Alive System** to ensure the website stays active 24/7 without going to sleep on free tiers.
+
+### Step 1: Deploy on Render (Free & Recommended)
+1. Go to [**Render.com**](https://render.com/) and sign in with your GitHub account.
+2. Click **New +** $\rightarrow$ **Web Service**.
+3. Select your repository: **`trithish0-star/college-ai-chatbot`**.
+4. Configure the settings:
+   - **Name:** `college-ai-chatbot`
+   - **Environment:** `Python 3`
+   - **Region:** `Singapore` or any nearby region
+   - **Branch:** `main`
+   - **Build Command:** `pip install -r requirements.txt && python database.py`
+   - **Start Command:** `gunicorn app:app --workers 2 --threads 4 --timeout 120`
+5. In **Environment Variables**, add:
+   - `PYTHON_VERSION` = `3.11.8`
+   - `APP_URL` = `https://<your-service-name>.onrender.com` (e.g. `https://college-ai-chatbot.onrender.com`)
+6. Click **Deploy Web Service**. Render will build and launch your live website in ~2 minutes!
+
+---
+
+### Step 2: Keep-Alive 24/7 Setup (Never Goes to Sleep)
+
+Free cloud hosting services (like Render) spin down servers after 15 minutes of inactivity. To prevent this, two automatic heartbeat solutions are integrated:
+
+1. **Built-in Self-Ping Thread (`app.py`):**
+   - Automatically reads the `APP_URL` environment variable.
+   - Pings `https://your-app.onrender.com/health` every 10 minutes in a lightweight background daemon thread.
+
+2. **GitHub Actions 24/7 Heartbeat (`.github/workflows/keep_alive.yml`):**
+   - Runs a GitHub Actions job every 12 minutes.
+   - Sends a ping to your deployed URL so it stays warm and ready around the clock.
+   - **To enable in GitHub:** Go to your repository $\rightarrow$ **Settings** $\rightarrow$ **Secrets and variables** $\rightarrow$ **Actions** $\rightarrow$ **Variables** tab $\rightarrow$ New variable named **`APP_URL`** with your Render URL (e.g. `https://college-ai-chatbot.onrender.com`).
+
+3. **External Uptime Monitor (Optional Free Alternative):**
+   - Register on [**UptimeRobot.com**](https://uptimerobot.com/) or [**Cron-Job.org**](https://cron-job.org/).
+   - Add an **HTTP(s) Monitor** pointing to: `https://your-app.onrender.com/health` with a 5-minute interval.
+
+---
+
 ## 🛡️ Security & Performance
 - **Password Protection:** PBKDF2:SHA256 password hashing via Werkzeug.
 - **SQL Injection Prevention:** 100% parameterized queries via SQLite3 cursor bindings.
